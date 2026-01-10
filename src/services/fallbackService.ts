@@ -1,39 +1,49 @@
-// Fallback prayer data when Gemini API is not available
-export const fallbackPrayers = {
-  morning: `Lord God Almighty,
-  as I begin this day,
-  I place myself in your presence.
-  Guide my thoughts, words, and actions.
-  May your Holy Spirit be with me.
-  Through Christ our Lord. Amen.`,
-  
-  evening: `Heavenly Father,
-  as this day ends,
-  I thank you for your blessings.
-  Forgive my shortcomings.
-  Watch over me through the night.
-  In Jesus' name. Amen.`,
-  
-  rosary: {
-    joyful: `The Joyful Mysteries remind us of Christ's incarnation...`,
-    sorrowful: `The Sorrowful Mysteries contemplate Jesus' passion...`,
-    glorious: `The Glorious Mysteries celebrate Christ's resurrection...`,
-    luminous: `The Luminous Mysteries reveal Christ's public ministry...`
-  }
-};
+// Fallback service that provides basic data without database
+export const fallbackService = {
+  async getPrayers() {
+    return [
+      {
+        id: 'our-father',
+        title: 'Our Father',
+        text: 'Our Father, who art in heaven, hallowed be thy name...',
+        category: 'basic',
+        language: 'English',
+        length: 'short',
+        tags: ['basic'],
+        favorite: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'hail-mary',
+        title: 'Hail Mary',
+        text: 'Hail Mary, full of grace, the Lord is with thee...',
+        category: 'basic',
+        language: 'English',
+        length: 'short',
+        tags: ['basic'],
+        favorite: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+  },
 
-export const dailyReadings = {
-  // Sample readings - you would update these daily
-  firstReading: {
-    citation: "1 John 4:7-10",
-    text: "Beloved, let us love one another, because love is of God..."
+  async searchPrayers(query: string) {
+    const prayers = await this.getPrayers();
+    const lowerQuery = query.toLowerCase();
+    return prayers.filter(prayer => 
+      prayer.title.toLowerCase().includes(lowerQuery) ||
+      prayer.text.toLowerCase().includes(lowerQuery)
+    );
   },
-  psalm: {
-    antiphon: "The Lord has made known his salvation.",
-    text: "Sing to the Lord a new song, for he has done wondrous deeds..."
-  },
-  gospel: {
-    citation: "Mark 6:34-44",
-    text: "When Jesus saw the vast crowd, his heart was moved with pity..."
+
+  async getStats() {
+    return {
+      totalPrayers: 2,
+      totalReadings: 0,
+      totalSaints: 0,
+      favoritePrayers: 2
+    };
   }
 };

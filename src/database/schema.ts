@@ -1,11 +1,12 @@
+// Simplified schema without complex imports
+
 export interface Prayer {
   id: string;
   title: string;
   text: string;
-  category: PrayerCategory;
-  subcategory?: string;
-  language: 'English' | 'Latin' | 'Spanish' | 'French' | 'Italian';
-  length: 'short' | 'medium' | 'long';
+  category: string;
+  language: string;
+  length: string;
   tags: string[];
   favorite?: boolean;
   createdAt: Date;
@@ -14,15 +15,12 @@ export interface Prayer {
 
 export interface Reading {
   id: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   weekday: string;
-  season: LiturgicalSeason;
-  color: LiturgicalColor;
-  feast?: string;
-  feastRank?: FeastRank;
+  season: string;
+  color: string;
   firstReading: BibleReading;
   psalm: PsalmReading;
-  secondReading?: BibleReading;
   gospel: BibleReading;
   saint?: string;
 }
@@ -40,12 +38,11 @@ export interface PsalmReading {
   number: number;
   text: string;
   antiphon: string;
-  refrain?: string;
 }
 
 export interface RosaryMystery {
   id: string;
-  mysteryType: RosaryMysteryType;
+  mysteryType: string;
   number: number;
   title: string;
   scripture: string;
@@ -57,51 +54,8 @@ export interface RosaryMystery {
 export interface Saint {
   id: string;
   name: string;
-  feastDay: string; // MM-DD
+  feastDay: string;
   description: string;
   patronage: string[];
   prayer: string;
-  image?: string;
 }
-
-export interface LiturgicalHour {
-  id: string;
-  hour: LiturgicalHourType;
-  title: string;
-  time: string;
-  prayers: string[];
-  psalms: number[];
-  reading?: string;
-  canticle?: string;
-}
-
-// Enums
-export type PrayerCategory = 
-  | 'daily' | 'morning' | 'evening' | 'night' 
-  | 'rosary' | 'divine-mercy' | 'liturgy-hours'
-  | 'sacraments' | 'mass' | 'eucharist'
-  | 'saints' | 'novenas' | 'litanies'
-  | 'penitential' | 'thanksgiving' | 'petition'
-  | 'healing' | 'protection' | 'guidance'
-  | 'family' | 'vocations' | 'departed';
-
-export type LiturgicalSeason = 
-  | 'advent' | 'christmas' | 'ordinary-time' 
-  | 'lent' | 'holy-week' | 'easter' | 'pentecost';
-
-export type LiturgicalColor = 
-  | 'white' | 'green' | 'purple' | 'red' | 'rose' | 'gold';
-
-export type FeastRank = 
-  | 'solemnity' | 'feast' | 'memorial' | 'optional-memorial';
-
-export type RosaryMysteryType = 
-  | 'joyful' | 'sorrowful' | 'glorious' | 'luminous';
-
-export type LiturgicalHourType = 
-  | 'matins' | 'lauds' | 'prime' | 'terce' | 'sext' 
-  | 'none' | 'vespers' | 'compline';
-
-export type Month = 
-  | 'january' | 'february' | 'march' | 'april' | 'may' | 'june'
-  | 'july' | 'august' | 'september' | 'october' | 'november' | 'december';
