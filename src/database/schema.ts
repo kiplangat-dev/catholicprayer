@@ -59,3 +59,36 @@ export interface Saint {
   patronage: string[];
   prayer: string;
 }
+
+export interface LiturgicalHour {
+  id: string;
+  type: string;
+  time: string;
+  prayers: Prayer[];
+}
+
+export interface PrayerCategory {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface LiturgicalSeason {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  color: string;
+}
+
+export interface RosaryMysteryType {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface LiturgicalHourType {
+  id: string;
+  name: string;
+  description: string;
+}
