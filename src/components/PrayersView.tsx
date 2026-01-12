@@ -1,36 +1,51 @@
-import { useState, useEffect } from 'react';
-import { databaseService } from '../services/databaseService';
-import type { Prayer, PrayerCategory } from '../database/schema';
+import React, { useState, useEffect } from 'react';
+import { databaseService } from '../services/enhancedDbService';
 
+interface Prayer {
+  id: string;
+  title: string;
+  text: string;
+  category: string;
+  language: string;
+  length: string;
+  tags: string[];
+  favorite?: boolean;
+  description?: string;
+}
 
 const PrayersView: React.FC = () => {
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [filteredPrayers, setFilteredPrayers] = useState<Prayer[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<PrayerCategory | 'all'>('all');
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [categories] = useState<PrayerCategory[]>([
-    'daily', 'morning', 'evening', 'rosary', 'divine-mercy',
-    'sacraments', 'saints', 'novenas', 'litanies', 'thanksgiving',
-    'healing', 'protection', 'guidance', 'family', 'vocations'
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [selectedPrayer, setSelectedPrayer] = useState<Prayer | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
-    loadPrayers();
+    loadData();
   }, []);
 
   useEffect(() => {
     filterPrayers();
   }, [selectedCategory, searchQuery, prayers]);
 
-  const loadPrayers = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await databaseService.getAllPrayers();
-      setPrayers(data);
-      setFilteredPrayers(data);
+      const [allPrayers, allCategories, allStats] = await Promise.all([
+        databaseService.getAllPrayers(),
+        databaseService.getCategories(),
+        databaseService.getStats()
+      ]);
+      setPrayers(allPrayers);
+      setCategories(allCategories as string[]);
+      setFilteredPrayers(allPrayers);
+      setStats(allStats);
     } catch (error) {
-      console.error('Error loading prayers:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -48,6 +63,7 @@ const PrayersView: React.FC = () => {
       filtered = filtered.filter(prayer =>
         prayer.title.toLowerCase().includes(query) ||
         prayer.text.toLowerCase().includes(query) ||
+        prayer.description?.toLowerCase().includes(query) ||
         prayer.tags.some(tag => tag.toLowerCase().includes(query))
       );
     }
@@ -71,14 +87,23 @@ const PrayersView: React.FC = () => {
     }
   };
 
-  const handleToggleFavorite = async (prayerId: string) => {
+  const handleToggleFavorite = async (prayerId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     await databaseService.toggleFavorite(prayerId);
-    loadPrayers(); // Refresh list
+    loadData(); // Refresh data
   };
 
-  const handleCopyPrayer = (text: string) => {
+  const handleCopyPrayer = (text: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     navigator.clipboard.writeText(text);
     alert('Prayer copied to clipboard!');
+  };
+
+  const handleViewPrayer = (prayer: Prayer, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedPrayer(prayer);
+    // Scroll to top when viewing prayer
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getCategoryDisplayName = (category: string): string => {
@@ -86,268 +111,368 @@ const PrayersView: React.FC = () => {
       'daily': 'Daily Prayers',
       'morning': 'Morning Prayers',
       'evening': 'Evening Prayers',
-      'rosary': 'Holy Rosary',
-      'divine-mercy': 'Divine Mercy',
+      'marian': 'Marian Prayers',
+      'rosary': 'Rosary Prayers',
+      'creed': 'Creeds',
       'sacraments': 'Sacraments',
+      'eucharist': 'Eucharist',
       'saints': 'Saints Prayers',
-      'novenas': 'Novenas',
-      'litanies': 'Litanies',
+      'healing': 'Healing Prayers',
       'thanksgiving': 'Thanksgiving',
-      'healing': 'Healing',
-      'protection': 'Protection',
-      'guidance': 'Guidance',
-      'family': 'Family',
-      'vocations': 'Vocations'
+      'family': 'Family Prayers',
+      'latin': 'Latin Prayers'
     };
     return names[category] || category;
   };
 
+  const formatPrayerText = (text: string): string => {
+    return text.replace(/\n/g, '<br />');
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="spinner h-12 w-12 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading prayers from database...</p>
+          <div className="loading-spinner mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading prayers...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">📿 Catholic Prayers Database</h1>
-        <p className="text-xl text-gray-600">{prayers.length}+ traditional prayers available offline</p>
+      <div className="bg-gradient-to-r from-catholic-red-500 to-catholic-red-600 text-white">
+        <div className="container mx-auto px-4 py-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">📿 Catholic Prayers</h1>
+          <p className="text-xl opacity-90 mb-6">Traditional prayers for every occasion and need</p>
+          
+          {stats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <div className="text-2xl font-bold">{stats.totalPrayers}</div>
+                <div className="text-sm opacity-80">Total Prayers</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <div className="text-2xl font-bold">{stats.favoritePrayers}</div>
+                <div className="text-sm opacity-80">Favorites</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <div className="text-2xl font-bold">{stats.totalSaints}</div>
+                <div className="text-sm opacity-80">Saints</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                <div className="text-2xl font-bold">{filteredPrayers.length}</div>
+                <div className="text-sm opacity-80">Showing</div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <input
-            type="text"
-            placeholder="Search prayers by title, text, or tags..."
-            className="input-primary flex-grow"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          <button onClick={handleSearch} className="btn-primary whitespace-nowrap">
-            �� Search Prayers
-          </button>
-        </div>
-
-        {/* Category Filter */}
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">Filter by Category:</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              className={`px-4 py-2 rounded-lg transition-all ${selectedCategory === 'all' 
-                ? 'bg-catholic-red text-white' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              onClick={() => setSelectedCategory('all')}
-            >
-              All Prayers
-            </button>
-            {categories.map(category => (
+      {/* Search and Filters */}
+      <div className="container mx-auto px-4 -mt-8">
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search prayers by title, text, or keyword..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="w-full px-6 py-4 pl-12 rounded-xl border-2 border-gray-200 focus:border-catholic-red-500 focus:ring-2 focus:ring-catholic-red-200 outline-none transition-all duration-200"
+                />
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl">
+                  🔍
+                </div>
+                <button
+                  onClick={handleSearch}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-catholic-red-500 text-white px-4 py-2 rounded-lg hover:bg-catholic-red-600 transition-colors"
+                >
+                  Search
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
               <button
-                key={category}
-                className={`px-4 py-2 rounded-lg transition-all ${selectedCategory === category 
-                  ? 'bg-catholic-red text-white' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                onClick={() => setSelectedCategory(category)}
+                onClick={() => setViewMode('grid')}
+                className={`px-4 py-2 rounded-lg ${viewMode === 'grid' ? 'bg-catholic-red-500 text-white' : 'bg-gray-100 text-gray-700'}`}
               >
-                {getCategoryDisplayName(category)}
+                🟦 Grid
               </button>
-            ))}
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-4 py-2 rounded-lg ${viewMode === 'list' ? 'bg-catholic-red-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+              >
+                📋 List
+              </button>
+            </div>
+          </div>
+
+          {/* Category Filters */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">Categories</h3>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-4 py-2 rounded-full ${selectedCategory === 'all' ? 'bg-catholic-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                All Prayers
+              </button>
+              {categories.map(category => (
+                <button
+                  key={category}
+                  onClick={() => setSelectedCategory(category)}
+                  className={`px-4 py-2 rounded-full ${selectedCategory === category ? 'bg-catholic-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  {getCategoryDisplayName(category)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="stat-card">
-          <div className="stat-number">{prayers.length}</div>
-          <div className="stat-label">Total Prayers</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{prayers.filter(p => p.favorite).length}</div>
-          <div className="stat-label">Favorites</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{filteredPrayers.length}</div>
-          <div className="stat-label">Showing</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{categories.length}</div>
-          <div className="stat-label">Categories</div>
-        </div>
-      </div>
+        {/* Prayer Display */}
+        {selectedPrayer ? (
+          /* Prayer Detail View */
+          <div className="bg-white rounded-2xl shadow-xl p-6 mb-8 animate-fade-in">
+            <button
+              onClick={() => setSelectedPrayer(null)}
+              className="mb-6 text-catholic-red-500 hover:text-catholic-red-600 flex items-center gap-2 hover:underline"
+            >
+              ← Back to Prayers
+            </button>
+            
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-800">{selectedPrayer.title}</h2>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="badge-category">{getCategoryDisplayName(selectedPrayer.category)}</span>
+                  <span className="badge-language">{selectedPrayer.language}</span>
+                  <span className="text-gray-500">• {selectedPrayer.length}</span>
+                </div>
+              </div>
+              <button
+                onClick={(e) => handleToggleFavorite(selectedPrayer.id, e)}
+                className={`text-3xl p-2 rounded-full hover:bg-gray-100 ${selectedPrayer.favorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}`}
+              >
+                {selectedPrayer.favorite ? '★' : '☆'}
+              </button>
+            </div>
 
-      {/* Prayers Grid */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Prayers ({filteredPrayers.length})</h2>
-        
-        {filteredPrayers.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {selectedPrayer.description && (
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r">
+                <p className="text-gray-700">{selectedPrayer.description}</p>
+              </div>
+            )}
+
+            <div className="mb-8">
+              <div className="bg-gray-50 rounded-xl p-6 mb-4">
+                <div 
+                  className="prayer-text whitespace-pre-line leading-relaxed text-gray-700 text-lg"
+                  dangerouslySetInnerHTML={{ __html: formatPrayerText(selectedPrayer.text) }}
+                />
+              </div>
+              
+              <div className="flex flex-wrap gap-2 mb-6">
+                {selectedPrayer.tags.map(tag => (
+                  <span key={tag} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <button
+                onClick={(e) => handleCopyPrayer(selectedPrayer.text, e)}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                📋 Copy Prayer
+              </button>
+              <button className="btn btn-outline flex items-center gap-2">
+                🔊 Play Audio
+              </button>
+              <button className="btn btn-outline flex items-center gap-2">
+                📤 Share
+              </button>
+              <button className="btn btn-outline flex items-center gap-2">
+                📝 Add Note
+              </button>
+            </div>
+          </div>
+        ) : viewMode === 'grid' ? (
+          /* Grid View */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {filteredPrayers.map(prayer => (
-              <div key={prayer.id} className="card-catholic">
-                {/* Prayer Header */}
+              <div
+                key={prayer.id}
+                className="card-prayer group transition-all duration-300 hover:shadow-xl cursor-pointer"
+                onClick={() => handleViewPrayer(prayer)}
+              >
                 <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{prayer.title}</h3>
-                    <span className="tag-category">
-                      {getCategoryDisplayName(prayer.category)}
-                    </span>
-                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-catholic-red-600 transition-colors duration-200 line-clamp-2">
+                    {prayer.title}
+                  </h3>
                   <button
-                    onClick={() => handleToggleFavorite(prayer.id)}
-                    className={`text-2xl ${prayer.favorite ? 'text-yellow-500' : 'text-gray-300'} hover:text-yellow-400`}
+                    onClick={(e) => handleToggleFavorite(prayer.id, e)}
+                    className={`text-xl p-1 rounded-full hover:bg-gray-100 ${prayer.favorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}`}
                   >
                     {prayer.favorite ? '★' : '☆'}
                   </button>
                 </div>
 
-                {/* Prayer Text Preview */}
-                <div className="mb-4">
-                  <p className="prayer-text line-clamp-4">
-                    {prayer.text}
+                {prayer.description && (
+                  <p className="text-gray-600 mb-4 line-clamp-2 text-sm">
+                    {prayer.description}
                   </p>
+                )}
+
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="badge-category text-xs">{getCategoryDisplayName(prayer.category)}</span>
+                  <span className="badge-language text-xs">{prayer.language}</span>
+                  <span className="text-gray-400 text-sm">• {prayer.length}</span>
                 </div>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {prayer.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="tag bg-blue-100 text-blue-800">
-                      {tag}
-                    </span>
-                  ))}
-                  {prayer.tags.length > 3 && (
-                    <span className="tag bg-gray-100 text-gray-600">
-                      +{prayer.tags.length - 3} more
-                    </span>
-                  )}
-                </div>
+                <p className="text-gray-700 mb-6 line-clamp-3 text-sm">
+                  {prayer.text.substring(0, 150)}...
+                </p>
 
-                {/* Metadata */}
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex gap-2">
-                    {prayer.language && (
-                      <span className="tag-language">🌐 {prayer.language}</span>
-                    )}
-                    <span className="tag bg-purple-100 text-purple-800">
-                      📏 {prayer.length}
-                    </span>
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {new Date(prayer.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => handleCopyPrayer(prayer.text)}
-                    className="flex-1 btn-outline py-2"
+                <div className="flex justify-between items-center">
+                  <button
+                    onClick={(e) => handleViewPrayer(prayer, e)}
+                    className="text-sm text-catholic-red-500 hover:text-catholic-red-600 font-medium hover:underline"
                   >
-                    📋 Copy
+                    View Prayer →
                   </button>
-                  <button className="flex-1 btn-secondary py-2">
-                    🙏 Pray Now
+                  <button
+                    onClick={(e) => handleCopyPrayer(prayer.text, e)}
+                    className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                    title="Copy prayer"
+                  >
+                    📋
                   </button>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-white rounded-xl shadow">
-            <div className="text-6xl mb-4">📖</div>
+          /* List View */
+          <div className="space-y-4 mb-12">
+            {filteredPrayers.map(prayer => (
+              <div
+                key={prayer.id}
+                className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow duration-200 border-l-4 border-catholic-red-500 cursor-pointer"
+                onClick={() => handleViewPrayer(prayer)}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-gray-800">{prayer.title}</h3>
+                      <span className="badge-category text-xs">{getCategoryDisplayName(prayer.category)}</span>
+                    </div>
+                    {prayer.description && (
+                      <p className="text-gray-600 mb-3 text-sm">{prayer.description}</p>
+                    )}
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <span>{prayer.language}</span>
+                      <span>•</span>
+                      <span>{prayer.length}</span>
+                      <span>•</span>
+                      <span>{prayer.tags.slice(0, 2).join(', ')}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={(e) => handleToggleFavorite(prayer.id, e)}
+                      className={`text-xl p-1 rounded-full hover:bg-gray-100 ${prayer.favorite ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400'}`}
+                    >
+                      {prayer.favorite ? '★' : '☆'}
+                    </button>
+                    <button
+                      onClick={(e) => handleCopyPrayer(prayer.text, e)}
+                      className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                      title="Copy prayer"
+                    >
+                      📋
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={(e) => handleViewPrayer(prayer, e)}
+                    className="text-sm text-catholic-red-500 hover:text-catholic-red-600 font-medium hover:underline"
+                  >
+                    View Full Prayer →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {filteredPrayers.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-5xl mb-4">🙏</div>
             <h3 className="text-2xl font-bold text-gray-700 mb-2">No prayers found</h3>
-            <p className="text-gray-600 mb-6">Try a different search term or category</p>
-            <button 
+            <p className="text-gray-500 mb-6">Try a different search term or category</p>
+            <button
               onClick={() => {
                 setSelectedCategory('all');
                 setSearchQuery('');
               }}
-              className="btn-primary"
+              className="btn btn-primary"
             >
               Clear Filters
             </button>
           </div>
         )}
-      </div>
 
-      {/* Database Info */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-8 mb-8">
-        <h3 className="text-2xl font-bold text-gray-800 mb-4">📦 Local Database</h3>
-        <p className="text-gray-700 mb-4">
-          All prayers are stored locally on your device. No internet connection required after initial setup.
-          Your favorites and custom prayers are saved automatically.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">✓</span>
-            Total: {prayers.length} prayers
+        {/* Quick Actions */}
+        <div className="bg-gradient-to-r from-catholic-red-50 to-red-50 rounded-2xl p-8 mb-8">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Quick Actions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button 
+              onClick={() => {
+                const favorites = prayers.filter(p => p.favorite);
+                if (favorites.length > 0) {
+                  setSelectedPrayer(favorites[0]);
+                } else {
+                  alert('No favorite prayers yet!');
+                }
+              }}
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow text-center hover:scale-105 transform duration-200"
+            >
+              <div className="text-3xl mb-3">⭐</div>
+              <h4 className="font-bold text-gray-800 mb-2">View Favorites</h4>
+              <p className="text-gray-600 text-sm">Your saved prayers</p>
+            </button>
+            <button 
+              onClick={() => {
+                const randomPrayer = prayers[Math.floor(Math.random() * prayers.length)];
+                setSelectedPrayer(randomPrayer);
+              }}
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow text-center hover:scale-105 transform duration-200"
+            >
+              <div className="text-3xl mb-3">🎲</div>
+              <h4 className="font-bold text-gray-800 mb-2">Random Prayer</h4>
+              <p className="text-gray-600 text-sm">Discover something new</p>
+            </button>
+            <button 
+              onClick={() => {
+                alert('Custom prayer feature coming soon!');
+              }}
+              className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow text-center hover:scale-105 transform duration-200"
+            >
+              <div className="text-3xl mb-3">📝</div>
+              <h4 className="font-bold text-gray-800 mb-2">Add Custom Prayer</h4>
+              <p className="text-gray-600 text-sm">Save your own prayers</p>
+            </button>
           </div>
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">✓</span>
-            Storage: ~{(prayers.length * 0.5).toFixed(1)}MB
-          </div>
-          <div className="flex items-center">
-            <span className="text-green-500 mr-2">✓</span>
-            Last updated: {new Date().toLocaleDateString()}
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-4 justify-center mb-12">
-        <button onClick={loadPrayers} className="btn-outline">
-          🔄 Refresh Prayers
-        </button>
-        <button className="btn-outline">
-          ⭐ View Favorites ({prayers.filter(p => p.favorite).length})
-        </button>
-        <button className="btn-outline">
-          🎲 Random Prayer
-        </button>
-        <button className="btn-primary">
-          ✍️ Add Custom Prayer
-        </button>
-      </div>
-
-      {/* Tips */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-8 border-l-4 border-amber-500">
-        <h3 className="text-2xl font-bold text-gray-800 mb-4">💡 Prayer Tips</h3>
-        <div className="grid md:grid-cols-2 gap-6">
-          <ul className="space-y-3">
-            <li className="flex items-start">
-              <span className="text-catholic-green mr-2 mt-1">✓</span>
-              <span>Find a quiet place to pray without distractions</span>
-            </li>
-            <li className="flex items-start">
-              <span className="text-catholic-green mr-2 mt-1">✓</span>
-              <span>Speak from your heart - God listens to sincere prayers</span>
-            </li>
-            <li className="flex items-start">
-              <span className="text-catholic-green mr-2 mt-1">✓</span>
-              <span>Pray regularly to strengthen your relationship with God</span>
-            </li>
-          </ul>
-          <ul className="space-y-3">
-            <li className="flex items-start">
-              <span className="text-catholic-green mr-2 mt-1">✓</span>
-              <span>Use prayer as a way to reflect on your day</span>
-            </li>
-            <li className="flex items-start">
-              <span className="text-catholic-green mr-2 mt-1">✓</span>
-              <span>Share prayers with family and friends</span>
-            </li>
-            <li className="flex items-start">
-              <span className="text-catholic-green mr-2 mt-1">✓</span>
-              <span>Combine prayer with scripture reading for deeper reflection</span>
-            </li>
-          </ul>
         </div>
       </div>
     </div>

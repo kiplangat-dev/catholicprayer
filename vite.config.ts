@@ -2,16 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [
-    react({
-      babel: {
-        plugins: [
-          ['@babel/plugin-proposal-decorators', { legacy: true }],
-          ['@babel/plugin-proposal-class-properties', { loose: true }]
-        ]
-      }
-    })
-  ],
+  plugins: [react()],
   resolve: {
     alias: {
       '@': '/src',
@@ -19,20 +10,17 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      '/api/usccb': {
+        target: 'https://bible.usccb.org',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/usccb/, ''),
+        secure: false
+      }
+    }
   },
   css: {
     postcss: './postcss.config.js',
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      tsconfig: './tsconfig.json'
-    }
-  },
-  build: {
-    target: 'es2020',
-    rollupOptions: {
-      external: []
-    }
   }
 })

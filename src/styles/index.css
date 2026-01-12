@@ -124,3 +124,38 @@
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Add these animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Improve button interactions */
+button:active {
+  transform: scale(0.98);
+}
+
+/* Better hover effects for prayer cards */
+.card-prayer {
+  transition: all 0.2s ease;
+}
+
+.card-prayer:hover {
+  transform: translateY(-2px);
+}
+
+/* Fix button z-index issues */
+button {
+  position: relative;
+  z-index: 10;
+}
