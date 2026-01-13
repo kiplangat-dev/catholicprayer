@@ -10,8 +10,8 @@ const Navigation = () => {
   const navLinks = [
     { path: '/', label: 'Home', icon: '🏠' },
     { path: '/readings', label: 'Readings', icon: '📖' },
-    { path: '/prayers', label: 'Prayers', icon: '📿' },
-    { path: '/rosary', label: 'Rosary', icon: '🙏' },
+    { path: '/prayers', label: 'Prayers', icon: '🙏' },
+    { path: '/rosary', label: 'Rosary', icon: '📿' },
     { path: '/saints', label: 'Saints', icon: '🧑‍🦳' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ];
@@ -122,7 +122,7 @@ const HomePage = () => (
           <div className="text-center">
             <div className="text-5xl mb-4">📚</div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">Offline Database</h3>
-            <p className="text-gray-600">All prayers and readings available without internet</p>
+            <p className="text-gray-600">All prayers available without internet</p>
           </div>
           <div className="text-center">
             <div className="text-5xl mb-4">🔍</div>
