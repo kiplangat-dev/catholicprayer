@@ -78,13 +78,13 @@ const HomePage = () => (
             color: 'from-blue-500 to-cyan-500',
           },
           {
-            title: '📿 400+ Prayers',
+            title: '🙏 400+ Prayers',
             description: 'Traditional prayers for every occasion',
             link: '/prayers',
             color: 'from-catholic-red-500 to-red-600',
           },
           {
-            title: '🙏 Holy Rosary',
+            title: '📿 Holy Rosary',
             description: 'Interactive rosary with all mysteries',
             link: '/rosary',
             color: 'from-purple-500 to-pink-500',
@@ -218,6 +218,7 @@ const PrayersView = () => (
           { title: 'Our Father', category: 'Basic', length: 'Short' },
           { title: 'Hail Mary', category: 'Basic', length: 'Short' },
           { title: 'Glory Be', category: 'Basic', length: 'Short' },
+          { title: 'St. Michael', category: 'Basic', length: 'Short'},
           { title: 'Apostles\' Creed', category: 'Creed', length: 'Medium' },
           { title: 'Morning Offering', category: 'Morning', length: 'Medium' },
           { title: 'Evening Prayer', category: 'Evening', length: 'Short' },
@@ -245,6 +246,7 @@ const PrayersView = () => (
               {prayer.title === 'Our Father' && 'Our Father, who art in heaven, hallowed be thy name...'}
               {prayer.title === 'Hail Mary' && 'Hail Mary, full of grace, the Lord is with thee...'}
               {prayer.title === 'Glory Be' && 'Glory be to the Father, and to the Son, and to the Holy Spirit...'}
+              {prayer.title === 'St. Michael' && 'St. Michael the Arch Angel defend us in the day of battle...'}
               {/* Add more prayer previews */}
             </p>
             
