@@ -187,7 +187,7 @@ const PrayersView = () => (
   <div className="container-padded">
     <div className="max-w-7xl mx-auto">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">📿 Catholic Prayers</h1>
+        <h1 className="text-4xl font-bold text-gray-800 mb-4"> Catholic Prayers</h1>
         <p className="text-gray-600 mb-6">Traditional prayers for every occasion and need</p>
         
         <div className="flex flex-wrap justify-center gap-4 mb-8">
